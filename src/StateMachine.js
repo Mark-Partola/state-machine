@@ -4,13 +4,13 @@ class StateMachine {
 
     monitor = false;
 
-    constructor(config) {
+    constructor (config) {
         this.graph = new graphLib.Graph();
 
         this._setConfig(config);
     }
 
-    _setConfig(config) {
+    _setConfig (config) {
         config.forEach((node) => {
             this.graph.setNode(node.name, {
                 onEnter: node.onEnter,
@@ -31,22 +31,40 @@ class StateMachine {
         });
     }
 
-    *_lifeCycle(currentNode) {
+    *_lifeCycle (currentNode) {
 
         let promiseStub = (data) => new Promise((r) => r(data));
 
         yield currentNode.onEnter || promiseStub;
         yield currentNode.trigger;
         yield currentNode.onLeave || promiseStub;
-        yield (nodeName) => {
+        return (nodeName) => {
             return this.getTransition(
-                this.currentNodeName,
-                nodeName
-            ) || promiseStub;
+                    this.currentNodeName,
+                    nodeName
+                ) || promiseStub;
         }
     }
 
-    setState(nodeName, data) {
+    _executeLifeCycle (generator, yieldValue, cb) {
+
+        let next = generator.next(yieldValue);
+
+        if (!next.done) {
+            next.value(yieldValue).then(
+                result => this._executeLifeCycle(generator, result, cb),
+                err => generator.throw(err)
+            );
+        } else {
+            cb({
+                f: next.value(yieldValue.next),
+                data: yieldValue
+            });
+        }
+
+    }
+
+    setState (nodeName, data) {
 
         return new Promise((resolve, reject) => {
 
@@ -61,49 +79,25 @@ class StateMachine {
 
             let currentNode = this.getCurrentState();
 
-            let stepsIterator = this._lifeCycle(currentNode);
-            
-            this.onEnter(this.onLeave())
+            this._executeLifeCycle(this._lifeCycle(currentNode), data, (trans) => {
+                trans.f(trans.data).then((data)=>{
+                    this.monitor = false;
 
-
-            //onEnter
-            stepsIterator.next().value(data).then((data) => {
-                //trigger
-                stepsIterator.next().value(data).then((data) => {
-                    console.log('in trigger');
-                    // console.log(stepsIterator.next().value());
-                    //onLeave
-                    stepsIterator.next().value(data).then((data) => {
-
-                        console.log('in onleave');
-
-                        //transition
-                        let transitionFunc = stepsIterator.next().value(data.next);
-
-
-                        transitionFunc(data).then((data) => {
-                            this.monitor = false;
-
-                            console.log(data);
-
-                            if (data.next) {
-                                if (this.checkTransition(data.next)) {
-                                    resolve(this.setState(data.next, data));
-                                } else {
-                                    reject('Transition not found');
-                                }
-                            } else {
-                                resolve(data);
-                            }
-                        });
-
-                    })
-                })
+                    if (data.next) {
+                        if (this.checkTransition(data.next)) {
+                            resolve(this.setState(data.next, data));
+                        } else {
+                            reject('Transition not found');
+                        }
+                    } else {
+                        resolve(data);
+                    }
+                });
             });
         });
     }
 
-    getCurrentPotentialTransitions() {
+    getCurrentPotentialTransitions () {
         let edges = this.graph.outEdges(this.currentNodeName);
         return edges.map((edge) => {
             return {
@@ -113,15 +107,15 @@ class StateMachine {
         });
     }
 
-    getTransition(source, target) {
+    getTransition (source, target) {
         return this.graph.edge(source, target);
     }
 
-    getCurrentState() {
+    getCurrentState () {
         return this.graph.node(this.currentNodeName);
     }
 
-    checkTransition(target) {
+    checkTransition (target) {
         let potentialTransitions = this.getCurrentPotentialTransitions();
 
         for (let i = 0; i < potentialTransitions.length; i++) {
