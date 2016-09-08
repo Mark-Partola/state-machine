@@ -62,9 +62,6 @@ class StateMachine {
             let currentNode = this.getCurrentState();
 
             let stepsIterator = this._lifeCycle(currentNode);
-            
-            this.onEnter(this.onLeave())
-
 
             //onEnter
             stepsIterator.next().value(data).then((data) => {

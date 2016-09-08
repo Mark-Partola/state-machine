@@ -44,7 +44,7 @@ export default [
         onEnter: (data) => {
             return new Promise((res) => {
                 console.log("Вошли в B");
-                res(data);//
+                res(data);
             });
         },
         trigger: (data) => new Promise((res, rej) => {
