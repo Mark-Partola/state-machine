@@ -1,4 +1,9 @@
-export default [
+Пример использования:
+
+```
+import StateMachine from './StateMachine';
+
+let statesConfig = [
     {
         name   : 'A',
         onEnter: () => {
@@ -114,3 +119,14 @@ export default [
         })
     }
 ];
+
+let stateMachine = new StateMachine(statesConfig);
+
+stateMachine.setState("A", {myArray: ['1','1','2']})
+    .then((result) => {
+        console.log(result);
+    })
+    .catch((err) => {
+        console.log(err);
+    });
+```
