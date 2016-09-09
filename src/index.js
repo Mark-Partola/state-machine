@@ -3,16 +3,15 @@ import statesConfig from './statesConfig';
 
 let stateMachine = new StateMachine(statesConfig);
 
-stateMachine.setState("A", ['1','1','2'])
+stateMachine.setState("A", {myArray: ['1','1','2']})
     .then((result) => {
-        console.log(result);
+      console.log('КОНЕЦ!', result);
     })
     .catch((err) => {
-        console.log(err);
+      console.error(err);
     });
 
-/*
-setTimeout(() => {
+/*setTimeout(() => {
     stateMachine.setState("C", { name: 'value' })
         .then((result) => {
             console.log(result);
