@@ -1,6 +1,15 @@
 import graphLib from 'graphlib';
 
 /**
+ * Класс позволяет создавать конечный автомат используя графы. Главная идея:
+ * У этапа есть жизненный цикл и есть возможность переходить от одного этапа к другому.
+ * У этапа 4 жизненных цикла:
+ * - Вход в этап onEnter
+ * - Работа этапа trigger
+ * - Выход из этапа onLeave
+ * - Переход к другому этапу onTransition
+ *
+ *
  * Нода - это описание Этапа, в рамках которого реализуется некая логика:
  * - во время входа в Этап (onEnter)
  * - во время жизни Этапа (trigger)
@@ -9,226 +18,244 @@ import graphLib from 'graphlib';
  */
 class StateMachine {
 
-    /**
-     * Отслеживает жихненный цикл Ноды.
-     * true - нода в активной фазе
-     * false - нет активных нод (состояние сразу после транзиции)
-     *
-     * @type {boolean}
-     */
-    monitor = false;
+  /**
+   * Отслеживает жихненный цикл Ноды.
+   * true - нода в активной фазе
+   * false - нет активных нод (состояние сразу после транзиции)
+   *
+   * @type {boolean}
+   */
+  monitor = false;
 
-    /**
-     * Имя текущей Ноды
-     *
-     * @type {string}
-     */
-    currentNodeName = '';
+  /**
+   * Имя текущей Ноды
+   *
+   * @type {string}
+   */
+  currentNodeName = '';
 
-    /**
-     * Имя следующей Ноды
-     * @type {string}
-     * @private
-     */
-    _nextState = '';
+  /**
+   * Имя следующей Ноды
+   * @type {string}
+   * @private
+   */
+  _nextState = '';
 
-    /**
-     * Принимает конфиг всех Нод
-     * Создает пустой граф.
-     *
-     * @param {Object[]} config
-     */
-    constructor (config) {
-        this.graph = new graphLib.Graph();
+  /**
+   * Принимает конфиг всех Нод
+   * Создает пустой граф.
+   *
+   * @param {Object[]} config
+   */
+  constructor (config) {
+    this.graph = new graphLib.Graph();
 
-        this._setConfig(config);
-    }
+    this._setConfig(config);
+  }
 
-    /**
-     * Строит из конфигов граф с нодами и переходами между ними
-     *
-     * @param {Object[]} config
-     */
-    _setConfig (config) {
+  /**
+   * Строит из конфигов граф с нодами и переходами между ними
+   *
+   * @param {Object[]} config
+   */
+  _setConfig (config) {
 
-        config.forEach((node) => {
-            this.graph.setNode(node.name, {
-                onEnter: node.onEnter,
-                trigger: node.trigger,
-                onLeave: node.onLeave
-            });
+    config.forEach((node) => {
+      this.graph.setNode(node.name, {
+        onEnter: node.onEnter,
+        trigger: node.trigger,
+        onLeave: node.onLeave
+      });
 
-            if (node.transitions) {
-                let targets = Object.keys(node.transitions);
-                targets.forEach((target) => {
-                    this.graph.setEdge(
-                        node.name,
-                        target,
-                        node.transitions[target]
-                    );
-                });
-            }
+      if (node.transitions) {
+        let targets = Object.keys(node.transitions);
+        targets.forEach((target) => {
+          this.graph.setEdge(
+            node.name,
+            target,
+            node.transitions[target]
+          );
         });
+      }
+    });
+  }
+
+  /**
+   * Генератор жизненного цикла для ноды. Итератор проходит по каждому этапу жизни ноды:
+   * - вход
+   * - работа
+   * - выход
+   * - переход
+   *
+   * @param currentNode
+   * @returns {*|(function(*=): Promise)}
+   * @private
+   */
+  *_lifeCycle (currentNode) {
+    let promiseStub = (data) => new Promise((r) => r(data));
+
+    yield currentNode.onEnter || promiseStub;
+    yield currentNode.trigger || promiseStub;
+    yield currentNode.onLeave || promiseStub;
+    return currentNode.onTransition = (
+      this.getTransition(
+        this.currentNodeName,
+        this._nextState
+      ) || promiseStub
+    );
+  }
+
+  /**
+   * Выполнение жизненного цикла ноды. В качестве завершения вызывает callback, куда передаются
+   * данные отработанные после transition. Также при выполнении цикла проверяется передавался ли
+   * в объекте параметр next, что является командой для записи имени следующего этапа, куда
+   * необходимо будет перейти в конце жизненного цикла.
+   *
+   * @callback runTransition
+   * @param generator - генератор для получения следующего жизненого цикла
+   * @param entryParams - входные параметры доставшиеся из предыдущего цикла
+   * @param {runTransition} cb - вызывается после завершения жизненного цикла ноды (после
+   *     transition)
+   * @private
+   */
+  _executeLifeCycle (generator, entryParams, cb) {
+    let nextStep = generator.next(entryParams);
+
+    /**
+     * Проверяем ключевое слово next, чтобы установить следующий этап.
+     * Ключевое слово удаляется из параметров, чтобы не передавалось дальше.
+     */
+    if (entryParams.next) {
+      this._nextState = entryParams.next;
+      delete entryParams.next;
     }
 
     /**
-     * Генератор жизненного цикла для ноды. Итератор проходит по каждому этапу жизни ноды:
-     * - вход
-     * - работа
-     * - выход
-     * - переход
-     *
-     * @param currentNode
-     * @returns {*|(function(*=): Promise)}
-     * @private
+     * Вызываем промис жизненного цикла (onEnter, trigger, onLeave или transition).
+     * После завершения промиса проверяем, что это был не последний жизненый цикл:
+     * - если не последний, то мержим входные параметры полученные из предыдущего жизненного цикла
+     * с данными, которые были переданы в начальный Этап. Если
+     * - если последний, то мержим только те параметры, которые передал предыдущий жизненный цикл и
+     * отдаем их в колбэке
      */
-    *_lifeCycle (currentNode) {
-        let promiseStub = (data) => new Promise((r) => r(data));
-
-        yield currentNode.onEnter || promiseStub;
-        yield currentNode.trigger || promiseStub;
-        yield currentNode.onLeave || promiseStub;
-        return currentNode.onTransition = (
-            this.getTransition(
-                this.currentNodeName,
-                this._nextState
-            ) || promiseStub
-        );
-    }
-
-    /**
-     * Выполнение жизненного цикла ноды. В качестве завершения вызывает callback, куда передаются
-     * данные отработанные после transition. Также при выполнении цикла проверяется передавался ли
-     * в объекте параметр next, что является командой для записи имени следующего этапа, куда
-     * необходимо будет перейти в конце жизненного цикла.
-     *
-     * @param generator
-     * @param yieldValue
-     * @callback cb
-     * @private
-     */
-    _executeLifeCycle (generator, yieldValue, cb) {
-        let next = generator.next(yieldValue);
-
-        if (yieldValue.next) {
-            this._nextState = yieldValue.next;
-            delete yieldValue.next;
-        }
-
-        next.value(yieldValue).then(
-            result => {
-                if (!next.done) {
-                    this._executeLifeCycle(generator, Object.assign({}, result, yieldValue), cb);
-                } else {
-                    cb(Object.assign({}, result));
-                }
-            },
-            err => generator.throw(err)
-        );
-    }
-
-    /**
-     * Устанавливает statemachine в текущее состояние.
-     *
-     * @param nodeName
-     * @param data
-     * @returns {Promise}
-     */
-    setState (nodeName, data) {
-
-        return new Promise((resolve, reject) => {
-
-            if (this.monitor) {
-                return reject('Monitor is reserved');
-            }
-
-            this.monitor = true;
-            this._nextState = '';
-            this.currentNodeName = nodeName;
-
-            let currentNode = this.getCurrentState();
-
-            this._executeLifeCycle(
-                this._lifeCycle(currentNode),
-                data,
-                this.runTransition.bind(this, resolve, reject)
-            );
-        });
-    }
-
-    /**
-     * Запускает переход между текущим состоянием и следующим.
-     *
-     * @param resolve
-     * @param reject
-     * @param data
-     */
-    runTransition (resolve, reject, data) {
-        this.monitor = false;
-
-        if (this._nextState) {
-            if (this.checkTransition(this._nextState)) {
-                resolve(this.setState(this._nextState, data));
-            } else {
-                reject('Transition not found');
-            }
+    nextStep.value(entryParams).then(
+      stepParams => {
+        if (!nextStep.done) {
+          this._executeLifeCycle(
+            generator,
+            Object.assign({}, stepParams, entryParams),
+            cb
+          );
         } else {
-            resolve(data);
+          cb(Object.assign({}, stepParams));
         }
+      },
+      err => generator.throw(err)
+    );
+  }
+
+  /**
+   * Устанавливает statemachine в текущее состояние.
+   *
+   * @param nodeName
+   * @param entryParams
+   * @returns {Promise}
+   */
+  setState (nodeName, entryParams) {
+
+    return new Promise((resolve, reject) => {
+
+      if (this.monitor) {
+        return reject('Monitor is reserved');
+      }
+
+      this.monitor = true;
+      this._nextState = '';
+      this.currentNodeName = nodeName;
+
+      let currentNode = this.getCurrentState();
+
+      this._executeLifeCycle(
+        this._lifeCycle(currentNode),
+        entryParams,
+        this.runTransition.bind(this, resolve, reject)
+      );
+    });
+  }
+
+  /**
+   * Запускает переход между текущим состоянием и следующим.
+   *
+   * @param resolve
+   * @param reject
+   * @param data
+   */
+  runTransition (resolve, reject, params) {
+    this.monitor = false;
+
+    if (this._nextState) {
+      if (this.checkTransition(this._nextState)) {
+        resolve(this.setState(this._nextState, params));
+      } else {
+        reject('Transition not found');
+      }
+    } else {
+      resolve(params);
+    }
+  }
+
+  /**
+   * Возвращает потенциальные переходы из текущей ноды.
+   *
+   * @returns {Array}
+   */
+  getCurrentPotentialTransitions () {
+    let edges = this.graph.outEdges(this.currentNodeName);
+    return edges.map((edge) => {
+      return {
+        source: edge.v,
+        target: edge.w
+      };
+    });
+  }
+
+  /**
+   * Возвращает транзицию между указанными нодами
+   *
+   * @param source
+   * @param target
+   * @returns {*}
+   */
+  getTransition (source, target) {
+    return this.graph.edge(source, target);
+  }
+
+  /**
+   * Возвращает текущюю ноду.
+   *
+   * @returns {*}
+   */
+  getCurrentState () {
+    return this.graph.node(this.currentNodeName);
+  }
+
+  /**
+   * Проверяет возможность перехода к указанной ноде.
+   *
+   * @param target
+   * @returns {boolean}
+   */
+  checkTransition (target) {
+    let potentialTransitions = this.getCurrentPotentialTransitions();
+
+    for (let i = 0; i < potentialTransitions.length; i++) {
+      if (potentialTransitions[i].target === target) {
+        return true;
+      }
     }
 
-    /**
-     * Возвращает потенциальные переходы из текущей ноды.
-     *
-     * @returns {Array}
-     */
-    getCurrentPotentialTransitions () {
-        let edges = this.graph.outEdges(this.currentNodeName);
-        return edges.map((edge) => {
-            return {
-                source: edge.v,
-                target: edge.w
-            };
-        });
-    }
-
-    /**
-     * Возвращает транзицию между указанными нодами
-     *
-     * @param source
-     * @param target
-     * @returns {*}
-     */
-    getTransition (source, target) {
-        return this.graph.edge(source, target);
-    }
-
-    /**
-     * Возвращает текущюю ноду.
-     *
-     * @returns {*}
-     */
-    getCurrentState () {
-        return this.graph.node(this.currentNodeName);
-    }
-
-    /**
-     * Проверяет возможность перехода к указанной ноде.
-     *
-     * @param target
-     * @returns {boolean}
-     */
-    checkTransition (target) {
-        let potentialTransitions = this.getCurrentPotentialTransitions();
-
-        for (let i = 0; i < potentialTransitions.length; i++) {
-            if (potentialTransitions[i].target === target) {
-                return true;
-            }
-        }
-
-        return false;
-    }
+    return false;
+  }
 }
 
 export default StateMachine;
