@@ -5,7 +5,7 @@ export default [
             return new Promise((res) => {
                 console.log("Входим в А");
                 res({
-                    mybewvalue: 'value'
+                    mybewvalue: [1,2,3]
                 });
             });
         },
@@ -20,9 +20,9 @@ export default [
             console.log('Логика для А');
             console.log('Данные для А: ' + JSON.stringify(data));
 
-            res({
-                next: 'B'
-            });
+            data.next = 'B';
+
+            res(data);
 
         }),
         transitions: {
@@ -53,16 +53,24 @@ export default [
             console.log('Логика для B');
             console.log('Данные для B: ' + JSON.stringify(data));
 
-            res({
-                next: 'C'
-            });
+            setTimeout(()=>{
+                res({
+                    next: 'A'
+                });
+            }, 1000);
 
         }),
         transitions: {
             C(data) {
                 return new Promise((res) => {
                     console.log("onTransition B->C");
-                    res(data);
+                    res();
+                });
+            },
+            A(data) {
+                return new Promise((res) => {
+                    console.log("onTransition B->A");
+                    res();
                 });
             }
         }

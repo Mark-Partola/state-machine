@@ -3,7 +3,7 @@ import statesConfig from './statesConfig';
 
 let stateMachine = new StateMachine(statesConfig);
 
-stateMachine.setState("A", ['1','1','2'])
+stateMachine.setState("A", {myArray: ['1','1','2']})
     .then((result) => {
         console.log(result);
     })
