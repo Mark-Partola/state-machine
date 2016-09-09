@@ -47,21 +47,19 @@ class StateMachine {
     }
 
     _executeLifeCycle (generator, yieldValue, cb) {
-
         let next = generator.next(yieldValue);
 
         if (!next.done) {
             next.value(yieldValue).then(
-                result => this._executeLifeCycle(generator, result, cb),
+                result => this._executeLifeCycle(generator, Object.assign({}, result, yieldValue), cb),
                 err => generator.throw(err)
             );
         } else {
             cb({
-                f: next.value(yieldValue.next),
+                f   : next.value(yieldValue.next),
                 data: yieldValue
             });
         }
-
     }
 
     setState (nodeName, data) {
@@ -80,12 +78,15 @@ class StateMachine {
             let currentNode = this.getCurrentState();
 
             this._executeLifeCycle(this._lifeCycle(currentNode), data, (trans) => {
-                trans.f(trans.data).then((data)=>{
+                trans.f(trans.data).then((data)=> {
                     this.monitor = false;
 
                     if (data.next) {
                         if (this.checkTransition(data.next)) {
-                            resolve(this.setState(data.next, data));
+                            let next = data.next;
+                            delete data.next;
+
+                            resolve(this.setState(next, data));
                         } else {
                             reject('Transition not found');
                         }

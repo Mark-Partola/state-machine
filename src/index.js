@@ -11,8 +11,7 @@ stateMachine.setState("A", ['1','1','2'])
         console.log(err);
     });
 
-/*
-setTimeout(() => {
+/*setTimeout(() => {
     stateMachine.setState("C", { name: 'value' })
         .then((result) => {
             console.log(result);

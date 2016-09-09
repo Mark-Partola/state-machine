@@ -1,16 +1,18 @@
 export default [
     {
         name   : 'A',
-        onEnter: (data) => {
+        onEnter: () => {
             return new Promise((res) => {
                 console.log("Входим в А");
-                res(data);
+                res({
+                    mybewvalue: 'value'
+                });
             });
         },
-        onLeave: (data) => {
+        onLeave: () => {
             return new Promise((res) => {
                 console.log("Вышли из А");
-                res(data);
+                res();
             });
         },
         trigger: (data) => new Promise((res) => {
@@ -19,8 +21,7 @@ export default [
             console.log('Данные для А: ' + JSON.stringify(data));
 
             res({
-                next: 'B',
-                data
+                next: 'B'
             });
 
         }),
@@ -53,8 +54,7 @@ export default [
             console.log('Данные для B: ' + JSON.stringify(data));
 
             res({
-                next: 'C',
-                data
+                next: 'C'
             });
 
         }),
