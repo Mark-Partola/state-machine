@@ -5,10 +5,10 @@ let stateMachine = new StateMachine(statesConfig);
 
 stateMachine.setState("A", {myArray: ['1','1','2']})
     .then((result) => {
-        console.log(result);
+      console.log('КОНЕЦ!', result);
     })
     .catch((err) => {
-        console.log(err);
+      console.error(err);
     });
 
 /*setTimeout(() => {

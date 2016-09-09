@@ -111,10 +111,10 @@ class StateMachine {
    * в объекте параметр next, что является командой для записи имени следующего этапа, куда
    * необходимо будет перейти в конце жизненного цикла.
    *
-   * @callback runTransition
+   * @callback _runTransition
    * @param generator - генератор для получения следующего жизненого цикла
    * @param entryParams - входные параметры доставшиеся из предыдущего цикла
-   * @param {runTransition} cb - вызывается после завершения жизненного цикла ноды (после
+   * @param {_runTransition} cb - вызывается после завершения жизненного цикла ноды (после
    *     transition)
    * @private
    */
@@ -147,10 +147,10 @@ class StateMachine {
             cb
           );
         } else {
-          cb(Object.assign({}, stepParams));
+          cb(null, Object.assign({}, stepParams));
         }
       },
-      err => generator.throw(err)
+      err => cb(err)
     );
   }
 
@@ -178,7 +178,7 @@ class StateMachine {
       this._executeLifeCycle(
         this._lifeCycle(currentNode),
         entryParams,
-        this.runTransition.bind(this, resolve, reject)
+        this._runTransition.bind(this, resolve, reject)
       );
     });
   }
@@ -186,11 +186,16 @@ class StateMachine {
   /**
    * Запускает переход между текущим состоянием и следующим.
    *
-   * @param resolve
-   * @param reject
-   * @param params
+   * @param resolve - успешное выполнение состояния
+   * @param reject - проброс ошибки
+   * @param err - ошибка, по умолчанию должна быть null
+   * @param params - параметры переданные для следующего состояния
    */
-  runTransition (resolve, reject, params) {
+  _runTransition (resolve, reject, err, params) {
+    if (err) {
+      return reject(err);
+    }
+
     this.monitor = false;
 
     if (this._nextState) {
