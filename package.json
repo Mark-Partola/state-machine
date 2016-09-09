@@ -4,7 +4,8 @@
   "description": "",
   "main": "./src/StateMachine.js",
   "scripts": {
-    "build:watch": ".\\node_modules\\.bin\\webpack --watch"
+    "build:watch": ".\\node_modules\\.bin\\webpack --watch",
+    "test": "node .\\node_modules\\karma\\bin\\karma start"
   },
   "author": "",
   "license": "ISC",
