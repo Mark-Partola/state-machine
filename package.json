@@ -2,7 +2,7 @@
   "name": "state-machine",
   "version": "1.0.0",
   "description": "",
-  "main": "./src/StateMachine.js",
+  "main": "./public/index.js",
   "scripts": {
     "build:watch": ".\\node_modules\\.bin\\webpack --watch",
     "build:dev": ".\\node_modules\\.bin\\webpack",
