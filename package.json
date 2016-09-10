@@ -2,11 +2,12 @@
   "name": "state-machine",
   "version": "1.0.0",
   "description": "",
-  "main": "./public/index.js",
+  "main": "./src/StateMachine.js",
   "scripts": {
+    "build:watch": ".\\node_modules\\.bin\\webpack --watch",
     "build:dev": ".\\node_modules\\.bin\\webpack",
     "build:prod": ".\\node_modules\\.bin\\webpack --config webpack.config.publish.js",
-    "build:watch": ".\\node_modules\\.bin\\webpack --watch"
+    "test": "node .\\node_modules\\karma\\bin\\karma start"
   },
   "author": "",
   "license": "ISC",
