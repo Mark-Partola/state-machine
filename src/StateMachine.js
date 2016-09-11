@@ -49,6 +49,10 @@ class StateMachine {
    */
   constructor (config) {
     this.graph = new graphLib.Graph();
+    
+    if (!Array.isArray(config)) {
+      throw new Error('Config is not given');
+    }
 
     this._setConfig(config);
   }
