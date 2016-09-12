@@ -201,7 +201,8 @@ class StateMachine {
   }
 
   setDesireState(nodeName, entryParams = {}) {
-    this._interruptStage.resolve();
+    entryParams.next = nodeName;
+    this._interruptStage.resolve(entryParams);
   }
 
   /**

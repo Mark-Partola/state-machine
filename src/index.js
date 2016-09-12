@@ -11,6 +11,11 @@ stateMachine.setState("A", {myArray: ['1','1','2']})
       console.error(err);
     });
 
+setTimeout(() => {
+    stateMachine.setDesireState('C', { hello: 'world' });
+}, 3000);
+
+
 /*setTimeout(() => {
     stateMachine.setState("C", { name: 'value' })
         .then((result) => {

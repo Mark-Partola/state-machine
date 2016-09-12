@@ -38,7 +38,7 @@ export default [
       console.log('Логика для B');
       console.log('Данные для B: ' + JSON.stringify(data));
 
-      setTimeout(() => deferred.resolve({ next: 'C' }), 1000);
+      setTimeout(() => deferred.resolve({ next: 'C' }), 10000);
 
     },
     transitions: {
