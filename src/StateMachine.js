@@ -1,4 +1,5 @@
 import graphLib from 'graphlib';
+import defer from 'promise-defer';
 
 /**
  * Класс позволяет создавать конечный автомат используя графы. Главная идея:
@@ -40,6 +41,12 @@ class StateMachine {
    * @private
    */
   _nextState = '';
+
+  /**
+   * Объект прерывания текущего этапа выполнения ноды (Deferred)
+   * @private
+     */
+  _interruptStage = null;
 
   /**
    * Принимает конфиг всех Нод
@@ -123,7 +130,7 @@ class StateMachine {
    * @private
    */
   _executeLifeCycle (generator, entryParams, cb) {
-    let nextStep = generator.next(entryParams);
+    let nextStep = generator.next();
 
     /**
      * Проверяем ключевое слово next, чтобы установить следующий этап.
@@ -142,20 +149,26 @@ class StateMachine {
      * - если последний, то мержим только те параметры, которые передал предыдущий жизненный цикл и
      * отдаем их в колбэке
      */
-    nextStep.value(entryParams).then(
-      stepParams => {
-        if (!nextStep.done) {
-          this._executeLifeCycle(
+
+    let onNextStage = (stepParams) => {
+      if (!nextStep.done) {
+        this._executeLifeCycle(
             generator,
-            Object.assign({}, stepParams, entryParams),
+            { ...stepParams, ...entryParams },
             cb
-          );
-        } else {
-          cb(null, Object.assign({}, stepParams));
-        }
-      },
-      err => cb(err)
-    );
+        );
+      } else {
+        cb(null, { ...stepParams });
+      }
+    };
+
+    this._interruptStage = defer();
+
+    nextStep.value(this._interruptStage, entryParams);
+
+    this._interruptStage.promise
+        .then(onNextStage)
+        .catch(err => cb(err));
   }
 
   /**
@@ -165,7 +178,7 @@ class StateMachine {
    * @param entryParams
    * @returns {Promise}
    */
-  setState (nodeName, entryParams) {
+  setState (nodeName, entryParams = {}) {
 
     return new Promise((resolve, reject) => {
 
@@ -185,6 +198,10 @@ class StateMachine {
         this._runTransition.bind(this, resolve, reject)
       );
     });
+  }
+
+  setDesireState(nodeName, entryParams = {}) {
+    this._interruptStage.resolve();
   }
 
   /**

@@ -1,118 +1,75 @@
 export default [
   {
     name       : 'A',
-    onEnter    : () => {
-      return new Promise((res, rej) => {
-        console.log("Входим в А");
-        res({
-          mybewvalue: [1, 2, 3]
-        });
-
-        // rej(new Error('Hahahahah im error!!'));
-      });
+    onEnter    : (deferred) => {
+      console.log("Входим в А");
+      deferred.resolve({ value: [1, 2, 3] });
     },
-    onLeave    : () => {
-      return new Promise((res) => {
-        console.log("Вышли из А");
-        res();
-      });
+    onLeave    : (deferred) => {
+      console.log("Вышли из А");
+      deferred.resolve();
     },
-    trigger    : (data) => new Promise((res) => {
-
+    trigger    : (deferred, data) => {
       console.log('Логика для А');
       console.log('Данные для А: ' + JSON.stringify(data));
 
       data.next = 'B';
+      deferred.resolve(data);
 
-      res(data);
-
-    }),
+    },
     transitions: {
-      C(data) {
-        return new Promise((res) => {
+      C: (deferred, data) => {
           console.log("onTransition A->C");
-          res(data);
-        });
+          deferred.resolve(data);
       },
-      B(data) {
-        return new Promise((res) => {
-          console.log("onTransition A->B");
-          res(data);
-        });
+      B: (deferred, data) => {
+        console.log("onTransition A->B");
+        deferred.resolve(data);
       }
     }
   },
   {
     name       : 'B',
-    onEnter    : (data) => {
-      return new Promise((res) => {
-        console.log("Вошли в B");
-        res(data);
-      });
+    onEnter    : (deferred, data) => {
+      console.log("Вошли в B");
+      deferred.resolve(data);
     },
-    trigger    : (data) => new Promise((res, rej) => {
-
+    trigger    : (deferred, data) => {
       console.log('Логика для B');
       console.log('Данные для B: ' + JSON.stringify(data));
 
-      setTimeout(()=> {
-        res({
-          next: 'C'
-        });
-      }, 1000);
+      setTimeout(() => deferred.resolve({ next: 'C' }), 1000);
 
-    }),
+    },
     transitions: {
-      C(data) {
-        return new Promise((res) => {
-          console.log("onTransition B->C");
-          res(data);
-        });
+      C: (deferred, data) => {
+        console.log("onTransition B->C");
+        deferred.resolve(data);
       },
-      A(data) {
-        return new Promise((res) => {
-          console.log("onTransition B->A");
-          res();
-        });
+      A: (deferred) => {
+        console.log("onTransition B->A");
+        deferred.resolve();
       }
     }
   },
   {
     name   : 'C',
-    trigger: (data) => new Promise((res, rej) => {
+    trigger: (deferred, data) => {
 
       console.log('Логика для С');
       console.log('Данные для C: ' + JSON.stringify(data));
 
-      res(data);
-    })/*,
-   transitions: {
-   A(data) {
-   return new Promise((res) => {
-   console.log("onTransition C->A");
-   res(data);
-   });
-   },
-   B(data) {
-   return new Promise((res) => {
-   console.log("onTransition C->A");
-   res(data);
-   });
-   }
-   }*/
-
+      deferred.resolve(data);
+    }
   },
   {
     name   : 'D',
-    trigger: (data) => new Promise((res, rej) => {
+    trigger: (deferred, data) => {
 
       console.log('Логика для D');
       console.log('Данные для D: ' + JSON.stringify(data));
 
-      res({
-        data: "State D finished"
-      });
-
-    })
+      deferred.resolve({ data: "State D finished" });
+    }
   }
 ];
