@@ -200,6 +200,13 @@ class StateMachine {
     });
   }
 
+  /**
+   * Резолвит отложенный объект,
+   * который ожидает резолва внутри этапа ноды.
+   * Передавая в next новое имя желаемой ноды
+   * @param nodeName
+   * @param entryParams
+     */
   setDesireState(nodeName, entryParams = {}) {
     entryParams.next = nodeName;
     this._interruptStage.resolve(entryParams);

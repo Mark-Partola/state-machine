@@ -1,5 +1,13 @@
 Пример использования:
 
+API
+ - setState
+ - setDesireState
+ - getCurrentPotentialTransitions
+ - getTransition
+ - getCurrentState
+ - checkTransition
+
 ```
 import StateMachine from './StateMachine';
 

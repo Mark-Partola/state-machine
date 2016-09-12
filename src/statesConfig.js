@@ -2,7 +2,6 @@ export default [
   {
     name       : 'A',
     onEnter    : (deferred) => {
-      console.log("Входим в А");
       deferred.resolve({ value: [1, 2, 3] });
     },
     onLeave    : (deferred) => {
