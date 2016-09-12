@@ -103,7 +103,7 @@ class StateMachine {
    * @private
    */
   *_lifeCycle (currentNode) {
-    let promiseStub = (data) => new Promise((r) => r(data));
+    let promiseStub = (deferred, data) => deferred.resolve(data);
 
     yield currentNode.onEnter || promiseStub;
     yield currentNode.trigger || promiseStub;

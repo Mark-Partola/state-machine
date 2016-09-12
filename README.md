@@ -4,120 +4,79 @@
 import StateMachine from './StateMachine';
 
 let statesConfig = [
-    {
-        name   : 'A',
-        onEnter: () => {
-            return new Promise((res) => {
-                console.log("Входим в А");
-                res({
-                    mybewvalue: [1,2,3]
-                });
-            });
-        },
-        onLeave: () => {
-            return new Promise((res) => {
-                console.log("Вышли из А");
-                res();
-            });
-        },
-        trigger: (data) => new Promise((res) => {
+ {
+   name       : 'A',
+   onEnter    : (deferred) => {
+     console.log("Входим в А");
+     deferred.resolve({ value: [1, 2, 3] });
+   },
+   onLeave    : (deferred) => {
+     console.log("Вышли из А");
+     deferred.resolve();
+   },
+   trigger    : (deferred, data) => {
+     console.log('Логика для А');
+     console.log('Данные для А: ' + JSON.stringify(data));
 
-            console.log('Логика для А');
-            console.log('Данные для А: ' + JSON.stringify(data));
+     data.next = 'B';
+     deferred.resolve(data);
 
-            data.next = 'B';
+   },
+   transitions: {
+     C: (deferred, data) => {
+         console.log("onTransition A->C");
+         deferred.resolve(data);
+     },
+     B: (deferred, data) => {
+       console.log("onTransition A->B");
+       deferred.resolve(data);
+     }
+   }
+ },
+ {
+   name       : 'B',
+   onEnter    : (deferred, data) => {
+     console.log("Вошли в B");
+     deferred.resolve(data);
+   },
+   trigger    : (deferred, data) => {
+     console.log('Логика для B');
+     console.log('Данные для B: ' + JSON.stringify(data));
 
-            res(data);
+     setTimeout(() => deferred.resolve({ next: 'C' }), 1000);
 
-        }),
-        transitions: {
-            C(data) {
-                return new Promise((res) => {
-                    console.log("onTransition A->C");
-                    res(data);
-                });
-            },
-            B(data) {
-                return new Promise((res) => {
-                    console.log("onTransition A->B");
-                    res(data);
-                });
-            }
-        }
-    },
-    {
-        name: 'B',
-        onEnter: (data) => {
-            return new Promise((res) => {
-                console.log("Вошли в B");
-                res(data);
-            });
-        },
-        trigger: (data) => new Promise((res, rej) => {
+   },
+   transitions: {
+     C: (deferred, data) => {
+       console.log("onTransition B->C");
+       deferred.resolve(data);
+     },
+     A: (deferred) => {
+       console.log("onTransition B->A");
+       deferred.resolve();
+     }
+   }
+ },
+ {
+   name   : 'C',
+   trigger: (deferred, data) => {
 
-            console.log('Логика для B');
-            console.log('Данные для B: ' + JSON.stringify(data));
+     console.log('Логика для С');
+     console.log('Данные для C: ' + JSON.stringify(data));
 
-            setTimeout(()=>{
-                res({
-                    next: 'C'
-                });
-            }, 1000);
+     deferred.resolve(data);
+   }
+ },
+ {
+   name   : 'D',
+   trigger: (deferred, data) => {
 
-        }),
-        transitions: {
-            C(data) {
-                return new Promise((res) => {
-                    console.log("onTransition B->C");
-                    res();
-                });
-            },
-            A(data) {
-                return new Promise((res) => {
-                    console.log("onTransition B->A");
-                    res();
-                });
-            }
-        }
-    },
-    {
-        name: 'C',
-        trigger: (data) => new Promise((res, rej) => {
+     console.log('Логика для D');
+     console.log('Данные для D: ' + JSON.stringify(data));
 
-            console.log('Логика для С');
-            console.log('Данные для C: ' + JSON.stringify(data));
-
-            res(data);
-        })/*,
-        transitions: {
-            A(data) {
-                return new Promise((res) => {
-                    console.log("onTransition C->A");
-                    res(data);
-                });
-            },
-            B(data) {
-                return new Promise((res) => {
-                    console.log("onTransition C->A");
-                    res(data);
-                });
-            }
-        }*/
-
-    },
-    {
-        name: 'D',
-        trigger: (data) => new Promise((res, rej) => {
-
-            console.log('Логика для D');
-            console.log('Данные для D: ' + JSON.stringify(data));
-
-            res({
-                data: "State D finished"
-            });
-
-        })
-    }
+     deferred.resolve({ data: "State D finished" });
+   }
+ }
 ];
 
 let stateMachine = new StateMachine(statesConfig);
