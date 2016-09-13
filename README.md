@@ -1,12 +1,18 @@
 Пример использования:
 
 API
- * setState
- * setDesireState
- * getCurrentPotentialTransitions
- * getTransition
- * getCurrentState
- * checkTransition
+
+* setState
+
+* setDesireState
+
+* getCurrentPotentialTransitions
+
+* getTransition
+
+* getCurrentState
+
+* checkTransition
 
 TODO: Переспотреть обязанности класса
 
