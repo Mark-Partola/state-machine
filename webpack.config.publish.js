@@ -13,7 +13,8 @@ module.exports = {
     publicPath   : '/public/'
   },
   externals: {
-    "graphlib": "graphlib"
+    "graphlib"     : "graphlib",
+    "promise-defer": "promise-defer"
   },
   plugins  : [
     new webpack.OldWatchingPlugin()
