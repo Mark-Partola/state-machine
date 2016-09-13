@@ -5,7 +5,7 @@ module.exports = {
     devtool: 'inline-source-map',
     entry  : [
         'babel-polyfill',
-        './src/index'
+        './examples/index'
     ],
     output : {
         path      : path.join(__dirname, 'dist'),
@@ -22,8 +22,7 @@ module.exports = {
             loader: 'babel',
             query: {
                 presets: ['es2015', 'stage-0']
-            },
-            include: path.join(__dirname, 'src')
+            }
         }]
     }
 };

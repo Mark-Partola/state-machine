@@ -1,4 +1,4 @@
-import StateMachine from './StateMachine';
+import StateMachine from './../src/StateMachine';
 import statesConfig from './statesConfig';
 
 let stateMachine = new StateMachine(statesConfig);
