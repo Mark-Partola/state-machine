@@ -1,13 +1,13 @@
 (function webpackUniversalModuleDefinition (root, factory) {
   if (typeof exports === 'object' && typeof module === 'object')
-    module.exports = factory(require("graphlib"));
+    module.exports = factory (require ("graphlib"), require ("promise-defer"));
   else if (typeof define === 'function' && define.amd)
-    define(["graphlib"], factory);
+    define (["graphlib", "promise-defer"], factory);
   else if (typeof exports === 'object')
-    exports["StateMachine"] = factory(require("graphlib"));
+    exports["StateMachine"] = factory (require ("graphlib"), require ("promise-defer"));
   else
-    root["StateMachine"] = factory(root["graphlib"]);
-})(this, function (__WEBPACK_EXTERNAL_MODULE_2__) {
+    root["StateMachine"] = factory (root["graphlib"], root["promise-defer"]);
+}) (this, function (__WEBPACK_EXTERNAL_MODULE_2__, __WEBPACK_EXTERNAL_MODULE_3__) {
   return /******/ (function (modules) { // webpackBootstrap
     /******/ 	// The module cache
     /******/
@@ -33,7 +33,7 @@
 
       /******/ 		// Execute the module function
       /******/
-      modules[moduleId].call(module.exports, module, module.exports, __webpack_require__);
+      modules[moduleId].call (module.exports, module, module.exports, __webpack_require__);
 
       /******/ 		// Flag the module as loaded
       /******/
@@ -59,15 +59,15 @@
 
     /******/ 	// Load entry module and return exports
     /******/
-    return __webpack_require__(0);
+    return __webpack_require__ (0);
     /******/
   })
   /************************************************************************/
-  /******/([
+  /******/ ([
     /* 0 */
     /***/ function (module, exports, __webpack_require__) {
 
-      module.exports = __webpack_require__(1);
+      module.exports = __webpack_require__ (1);
 
       /***/
     },
@@ -76,9 +76,21 @@
 
       'use strict';
 
-      Object.defineProperty(exports, "__esModule", {
+      Object.defineProperty (exports, "__esModule", {
         value: true
       });
+
+      var _extends = Object.assign || function (target) {
+          for (var i = 1; i < arguments.length; i++) {
+            var source = arguments[i];
+            for (var key in source) {
+              if (Object.prototype.hasOwnProperty.call (source, key)) {
+                target[key] = source[key];
+              }
+            }
+          }
+          return target;
+        };
 
       var _createClass = function () {
         function defineProperties (target, props) {
@@ -87,26 +99,30 @@
             descriptor.enumerable = descriptor.enumerable || false;
             descriptor.configurable = true;
             if ("value" in descriptor) descriptor.writable = true;
-            Object.defineProperty(target, descriptor.key, descriptor);
+            Object.defineProperty (target, descriptor.key, descriptor);
           }
         }
 
         return function (Constructor, protoProps, staticProps) {
-          if (protoProps) defineProperties(Constructor.prototype, protoProps);
-          if (staticProps) defineProperties(Constructor, staticProps);
+          if (protoProps) defineProperties (Constructor.prototype, protoProps);
+          if (staticProps) defineProperties (Constructor, staticProps);
           return Constructor;
         };
-      }();
+      } ();
 
-      var _graphlib = __webpack_require__(2);
+      var _graphlib = __webpack_require__ (2);
 
-      var _graphlib2 = _interopRequireDefault(_graphlib);
+      var _graphlib2 = _interopRequireDefault (_graphlib);
+
+      var _promiseDefer = __webpack_require__ (3);
+
+      var _promiseDefer2 = _interopRequireDefault (_promiseDefer);
 
       function _interopRequireDefault (obj) { return obj && obj.__esModule ? obj : {default: obj}; }
 
       function _classCallCheck (instance, Constructor) {
         if (!(instance instanceof Constructor)) {
-          throw new TypeError("Cannot call a class as a function");
+          throw new TypeError ("Cannot call a class as a function");
         }
       }
 
@@ -136,29 +152,6 @@
          */
 
         /**
-         * Имя текущей Ноды
-         *
-         * @type {string}
-         */
-        function StateMachine (config) {
-          _classCallCheck(this, StateMachine);
-
-          this.monitor = false;
-          this.currentNodeName = '';
-          this._nextState = '';
-
-          this.graph = new _graphlib2.default.Graph();
-
-          this._setConfig(config);
-        }
-
-        /**
-         * Строит из конфигов граф с нодами и переходами между ними
-         *
-         * @param {Object[]} config
-         */
-
-        /**
          * Имя следующей Ноды
          * @type {string}
          * @private
@@ -171,24 +164,57 @@
          *
          * @type {boolean}
          */
+        function StateMachine (config) {
+          _classCallCheck (this, StateMachine);
+
+          this.monitor = false;
+          this.currentNodeName = '';
+          this._nextState = '';
+          this._interruptStage = null;
+
+          this.graph = new _graphlib2.default.Graph ();
+
+          if (!Array.isArray (config)) {
+            throw new Error ('Config is not given');
+          }
+
+          this._setConfig (config);
+        }
+
+        /**
+         * Строит из конфигов граф с нодами и переходами между ними
+         *
+         * @param {Object[]} config
+         */
+
+        /**
+         * Объект прерывания текущего этапа выполнения ноды (Deferred)
+         * @private
+         */
+
+        /**
+         * Имя текущей Ноды
+         *
+         * @type {string}
+         */
 
 
-        _createClass(StateMachine, [{
+        _createClass (StateMachine, [{
           key  : '_setConfig',
           value: function _setConfig (config) {
             var _this = this;
 
-            config.forEach(function (node) {
-              _this.graph.setNode(node.name, {
+            config.forEach (function (node) {
+              _this.graph.setNode (node.name, {
                 onEnter: node.onEnter,
                 trigger: node.trigger,
                 onLeave: node.onLeave
               });
 
               if (node.transitions) {
-                var targets = Object.keys(node.transitions);
-                targets.forEach(function (target) {
-                  _this.graph.setEdge(node.name, target, node.transitions[target]);
+                var targets = Object.keys (node.transitions);
+                targets.forEach (function (target) {
+                  _this.graph.setEdge (node.name, target, node.transitions[target]);
                 });
               }
             });
@@ -208,16 +234,14 @@
 
         }, {
           key  : '_lifeCycle',
-          value: regeneratorRuntime.mark(function _lifeCycle (currentNode) {
+          value: regeneratorRuntime.mark (function _lifeCycle (currentNode) {
             var promiseStub;
-            return regeneratorRuntime.wrap(function _lifeCycle$ (_context) {
+            return regeneratorRuntime.wrap (function _lifeCycle$ (_context) {
               while (1) {
                 switch (_context.prev = _context.next) {
                   case 0:
-                    promiseStub = function promiseStub (data) {
-                      return new Promise(function (r) {
-                        return r(data);
-                      });
+                    promiseStub = function promiseStub (deferred, data) {
+                      return deferred.resolve (data);
                     };
 
                     _context.next = 3;
@@ -232,11 +256,11 @@
                     return currentNode.onLeave || promiseStub;
 
                   case 7:
-                    return _context.abrupt('return', currentNode.onTransition = this.getTransition(this.currentNodeName, this._nextState) || promiseStub);
+                    return _context.abrupt ('return', currentNode.onTransition = this.getTransition (this.currentNodeName, this._nextState) || promiseStub);
 
                   case 8:
                   case 'end':
-                    return _context.stop();
+                    return _context.stop ();
                 }
               }
             }, _lifeCycle, this);
@@ -261,7 +285,7 @@
           value: function _executeLifeCycle (generator, entryParams, cb) {
             var _this2 = this;
 
-            var nextStep = generator.next(entryParams);
+            var nextStep = generator.next ();
 
             /**
              * Проверяем ключевое слово next, чтобы установить следующий этап.
@@ -280,14 +304,21 @@
              * - если последний, то мержим только те параметры, которые передал предыдущий
              * жизненный цикл и отдаем их в колбэке
              */
-            nextStep.value(entryParams).then(function (stepParams) {
+
+            var onNextStage = function onNextStage (stepParams) {
               if (!nextStep.done) {
-                _this2._executeLifeCycle(generator, Object.assign({}, stepParams, entryParams), cb);
+                _this2._executeLifeCycle (generator, _extends ({}, stepParams, entryParams), cb);
               } else {
-                cb(null, Object.assign({}, stepParams));
+                cb (null, _extends ({}, stepParams));
               }
-            }, function (err) {
-              return cb(err);
+            };
+
+            this._interruptStage = (0, _promiseDefer2.default) ();
+
+            nextStep.value (this._interruptStage, entryParams);
+
+            this._interruptStage.promise.then (onNextStage).catch (function (err) {
+              return cb (err);
             });
           }
 
@@ -301,23 +332,42 @@
 
         }, {
           key  : 'setState',
-          value: function setState (nodeName, entryParams) {
+          value: function setState (nodeName) {
             var _this3 = this;
 
-            return new Promise(function (resolve, reject) {
+            var entryParams = arguments.length <= 1 || arguments[1] === undefined ? {} : arguments[1];
+
+            return new Promise (function (resolve, reject) {
 
               if (_this3.monitor) {
-                return reject('Monitor is reserved');
+                return reject ('Monitor is reserved');
               }
 
               _this3.monitor = true;
               _this3._nextState = '';
               _this3.currentNodeName = nodeName;
 
-              var currentNode = _this3.getCurrentState();
+              var currentNode = _this3.getCurrentState ();
 
-              _this3._executeLifeCycle(_this3._lifeCycle(currentNode), entryParams, _this3._runTransition.bind(_this3, resolve, reject));
+              _this3._executeLifeCycle (_this3._lifeCycle (currentNode), entryParams, _this3._runTransition.bind (_this3, resolve, reject));
             });
+          }
+
+          /**
+           * Резолвит отложенный объект,
+           * который ожидает резолва внутри этапа ноды.
+           * Передавая в next новое имя желаемой ноды
+           * @param nodeName
+           * @param entryParams
+           */
+
+        }, {
+          key  : 'setDesireState',
+          value: function setDesireState (nodeName) {
+            var entryParams = arguments.length <= 1 || arguments[1] === undefined ? {} : arguments[1];
+
+            entryParams.next = nodeName;
+            this._interruptStage.resolve (entryParams);
           }
 
           /**
@@ -333,19 +383,19 @@
           key  : '_runTransition',
           value: function _runTransition (resolve, reject, err, params) {
             if (err) {
-              return reject(err);
+              return reject (err);
             }
 
             this.monitor = false;
 
             if (this._nextState) {
-              if (this.checkTransition(this._nextState)) {
-                resolve(this.setState(this._nextState, params));
+              if (this.checkTransition (this._nextState)) {
+                resolve (this.setState (this._nextState, params));
               } else {
-                reject('Transition not found');
+                reject ('Transition not found');
               }
             } else {
-              resolve(params);
+              resolve (params);
             }
           }
 
@@ -358,8 +408,8 @@
         }, {
           key  : 'getCurrentPotentialTransitions',
           value: function getCurrentPotentialTransitions () {
-            var edges = this.graph.outEdges(this.currentNodeName);
-            return edges.map(function (edge) {
+            var edges = this.graph.outEdges (this.currentNodeName);
+            return edges.map (function (edge) {
               return {
                 source: edge.v,
                 target: edge.w
@@ -378,7 +428,7 @@
         }, {
           key  : 'getTransition',
           value: function getTransition (source, target) {
-            return this.graph.edge(source, target);
+            return this.graph.edge (source, target);
           }
 
           /**
@@ -390,7 +440,7 @@
         }, {
           key  : 'getCurrentState',
           value: function getCurrentState () {
-            return this.graph.node(this.currentNodeName);
+            return this.graph.node (this.currentNodeName);
           }
 
           /**
@@ -403,7 +453,7 @@
         }, {
           key  : 'checkTransition',
           value: function checkTransition (target) {
-            var potentialTransitions = this.getCurrentPotentialTransitions();
+            var potentialTransitions = this.getCurrentPotentialTransitions ();
 
             for (var i = 0; i < potentialTransitions.length; i++) {
               if (potentialTransitions[i].target === target) {
@@ -416,7 +466,7 @@
         }]);
 
         return StateMachine;
-      }();
+      } ();
 
       exports.default = StateMachine;
 
@@ -426,6 +476,13 @@
     /***/ function (module, exports) {
 
       module.exports = __WEBPACK_EXTERNAL_MODULE_2__;
+
+      /***/
+    },
+    /* 3 */
+    /***/ function (module, exports) {
+
+      module.exports = __WEBPACK_EXTERNAL_MODULE_3__;
 
       /***/
     }
