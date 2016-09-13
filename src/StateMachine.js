@@ -1,5 +1,5 @@
-import graphLib from 'graphlib';
 import defer from 'promise-defer';
+import TransitionStrategy from './TransitionStrategy';
 
 /**
  * Класс позволяет создавать конечный автомат используя графы. Главная идея:
@@ -17,7 +17,7 @@ import defer from 'promise-defer';
  * - во время  выхода из Этапа (onLeave)
  * - переход между этапами (transition)
  */
-class StateMachine {
+export default class StateMachine {
 
   /**
    * Отслеживает жихненный цикл Ноды.
@@ -27,13 +27,6 @@ class StateMachine {
    * @type {boolean}
    */
   monitor = false;
-
-  /**
-   * Имя текущей Ноды
-   *
-   * @type {string}
-   */
-  currentNodeName = '';
 
   /**
    * Имя следующей Ноды
@@ -50,13 +43,13 @@ class StateMachine {
 
   /**
    * Принимает конфиг всех Нод
-   * Создает пустой граф.
    *
    * @param {Object[]} config
+   * @param transitionStrategy
    */
-  constructor (config) {
-    this.graph = new graphLib.Graph();
-    
+  constructor (config, transitionStrategy = new TransitionStrategy()) {
+    this.transitionStrategy = transitionStrategy;
+
     if (!Array.isArray(config)) {
       throw new Error('Config is not given');
     }
@@ -72,7 +65,7 @@ class StateMachine {
   _setConfig (config) {
 
     config.forEach((node) => {
-      this.graph.setNode(node.name, {
+      this.transitionStrategy.setNode(node.name, {
         onEnter: node.onEnter,
         trigger: node.trigger,
         onLeave: node.onLeave
@@ -81,7 +74,7 @@ class StateMachine {
       if (node.transitions) {
         let targets = Object.keys(node.transitions);
         targets.forEach((target) => {
-          this.graph.setEdge(
+          this.transitionStrategy.setEdge(
             node.name,
             target,
             node.transitions[target]
@@ -93,24 +86,21 @@ class StateMachine {
 
   /**
    * Генератор жизненного цикла для ноды. Итератор проходит по каждому этапу жизни ноды:
-   * - вход
-   * - работа
-   * - выход
-   * - переход
+   * - вход -> работа -> выход -> переход
    *
-   * @param currentNode
-   * @returns {*|(function(*=): Promise)}
+   * @param currentState
+   * @returns
    * @private
    */
-  *_lifeCycle (currentNode) {
+  *_lifeCycle (currentState) {
     let promiseStub = (deferred, data) => deferred.resolve(data);
 
-    yield currentNode.onEnter || promiseStub;
-    yield currentNode.trigger || promiseStub;
-    yield currentNode.onLeave || promiseStub;
-    return currentNode.onTransition = (
-      this.getTransition(
-        this.currentNodeName,
+    yield currentState.onEnter || promiseStub;
+    yield currentState.trigger || promiseStub;
+    yield currentState.onLeave || promiseStub;
+
+    return currentState.onTransition = (
+      this.transitionStrategy.getTransition(
         this._nextState
       ) || promiseStub
     );
@@ -125,8 +115,7 @@ class StateMachine {
    * @callback _runTransition
    * @param generator - генератор для получения следующего жизненого цикла
    * @param entryParams - входные параметры доставшиеся из предыдущего цикла
-   * @param {_runTransition} cb - вызывается после завершения жизненного цикла ноды (после
-   *     transition)
+   * @param {_runTransition} cb - вызывается после завершения жизненного цикла ноды
    * @private
    */
   _executeLifeCycle (generator, entryParams, cb) {
@@ -188,12 +177,12 @@ class StateMachine {
 
       this.monitor = true;
       this._nextState = '';
-      this.currentNodeName = nodeName;
+      this.transitionStrategy.setCurrentNodeName(nodeName);
 
-      let currentNode = this.getCurrentState();
+      let currentState = this.transitionStrategy.getCurrentState();
 
       this._executeLifeCycle(
-        this._lifeCycle(currentNode),
+        this._lifeCycle(currentState),
         entryParams,
         this._runTransition.bind(this, resolve, reject)
       );
@@ -228,68 +217,13 @@ class StateMachine {
     this.monitor = false;
 
     if (this._nextState) {
-      if (this.checkTransition(this._nextState)) {
-        resolve(this.setState(this._nextState, params));
+      if (this.transitionStrategy.checkTransition(this._nextState)) {
+        return resolve(this.setState(this._nextState, params));
       } else {
-        reject('Transition not found');
+        return reject('Transition not found');
       }
     } else {
-      resolve(params);
+      return resolve(params);
     }
-  }
-
-  /**
-   * Возвращает потенциальные переходы из текущей ноды.
-   *
-   * @returns {Array}
-   */
-  getCurrentPotentialTransitions () {
-    let edges = this.graph.outEdges(this.currentNodeName);
-    return edges.map((edge) => {
-      return {
-        source: edge.v,
-        target: edge.w
-      };
-    });
-  }
-
-  /**
-   * Возвращает транзицию между указанными нодами
-   *
-   * @param source
-   * @param target
-   * @returns {*}
-   */
-  getTransition (source, target) {
-    return this.graph.edge(source, target);
-  }
-
-  /**
-   * Возвращает текущюю ноду.
-   *
-   * @returns {*}
-   */
-  getCurrentState () {
-    return this.graph.node(this.currentNodeName);
-  }
-
-  /**
-   * Проверяет возможность перехода к указанной ноде.
-   *
-   * @param target
-   * @returns {boolean}
-   */
-  checkTransition (target) {
-    let potentialTransitions = this.getCurrentPotentialTransitions();
-
-    for (let i = 0; i < potentialTransitions.length; i++) {
-      if (potentialTransitions[i].target === target) {
-        return true;
-      }
-    }
-
-    return false;
   }
 }
-
-export default StateMachine;
