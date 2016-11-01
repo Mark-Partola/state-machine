@@ -14,8 +14,6 @@ API
 
 * checkTransition
 
-TODO: Переспотреть обязанности класса
-
 ```
 import StateMachine from './StateMachine';
 

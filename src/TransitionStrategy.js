@@ -36,9 +36,8 @@ export default class TransitionStrategy {
     }
 
     /**
-     * Возвращает транзицию между указанными нодами
+     * Возвращает транзицию к указанной ноде
      *
-     * @param source
      * @param target
      * @returns {*}
      */
